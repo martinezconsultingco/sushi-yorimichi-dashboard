@@ -20,6 +20,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);font-
 .load-banner{background:#111110;border-radius:var(--r);padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .load-text{font-size:12px;color:#d0cdc8;line-height:1.5;flex:1}
 .load-text strong{color:#fff}
+.time-controls{display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.time-label{font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:0.06em;margin-right:4px}
+.time-btn{padding:6px 14px;border-radius:20px;border:0.5px solid var(--bd2);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:var(--tx2);cursor:pointer;transition:all 0.15s}
+.time-btn:hover{border-color:var(--ac);color:var(--act)}
+.time-btn.active{background:var(--tx);color:#fff;border-color:var(--tx)}
 .error-banner{display:none;background:var(--rbg);border:0.5px solid var(--red);border-radius:var(--r);padding:12px 16px;margin-bottom:20px;font-size:12px;color:var(--red)}
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:20px}
 .kpi-card{background:var(--surface);border:0.5px solid var(--bd);border-radius:var(--r);padding:16px}
@@ -73,6 +78,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);font-
 
   <div class="load-banner">
     <div class="load-text"><strong>This dashboard updates automatically.</strong> Numbers below are pulled live from the weekly tracking sheet each time this page loads — no manual updates needed on this end.</div>
+  </div>
+
+  <div class="time-controls">
+    <span class="time-label">View by</span>
+    <button class="time-btn active" onclick="setRange('week', this)">Weekly</button>
+    <button class="time-btn" onclick="setRange('month', this)">Monthly</button>
+    <button class="time-btn" onclick="setRange('all', this)">All Time</button>
   </div>
 
   <div class="error-banner" id="errorBanner"></div>
@@ -216,6 +228,17 @@ function renderKPIs(latest, prev) {
   const fbChg = prev && num(latest['FB Followers']) !== null && num(prev['FB Followers']) !== null
     ? num(latest['FB Followers']) - num(prev['FB Followers']) : null;
 
+  // Label the comparison honestly based on the actual gap between rows,
+  // rather than always assuming "last week" - two rows a real week apart
+  // say "vs last week"; anything else says "vs baseline" with the real date.
+  let compareLabel = 'vs baseline';
+  if (prev) {
+    const d1 = new Date(prev['Date']);
+    const d2 = new Date(latest['Date']);
+    const dayGap = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+    compareLabel = (dayGap >= 5 && dayGap <= 9) ? 'vs last week' : `vs ${prev['Date']}`;
+  }
+
   const cards = [
     { label: 'Instagram Followers', val: latest['IG Followers'], chg: igChg, sub: `${latest['IG Total Posts'] || '—'} total posts` },
     { label: 'Facebook Followers', val: latest['FB Followers'], chg: fbChg, sub: `${latest['FB Reviews'] || '—'} reviews` },
@@ -229,7 +252,7 @@ function renderKPIs(latest, prev) {
     <div class="kpi-card">
       <div class="kpi-label">${c.label}</div>
       <div class="kpi-val" style="${c.red ? 'color:var(--red)' : ''}">${c.val}</div>
-      ${c.chg !== null ? `<div class="kpi-change ${c.chg > 0 ? 'up' : c.chg < 0 ? 'down' : 'flat'}">${c.chg > 0 ? '↑' : c.chg < 0 ? '↓' : ''} ${c.chg > 0 ? '+' : ''}${c.chg} vs last week</div>` : ''}
+      ${c.chg !== null ? `<div class="kpi-change ${c.chg > 0 ? 'up' : c.chg < 0 ? 'down' : 'flat'}">${c.chg > 0 ? '↑' : c.chg < 0 ? '↓' : ''} ${c.chg > 0 ? '+' : ''}${c.chg} ${compareLabel}</div>` : ''}
       <div class="kpi-sub">${c.sub}</div>
     </div>`).join('');
 }
@@ -260,6 +283,28 @@ function toggleSection(id) {
   if (icon) icon.textContent = was ? '▾' : '▸';
 }
 
+let allRows = [];
+let currentRange = 'week';
+
+function filterRowsByRange(rows, range) {
+  if (range === 'all' || rows.length <= 1) return rows;
+  const latest = new Date(rows[rows.length - 1]['Date']);
+  const cutoffDays = range === 'week' ? 90 : 365; // show last ~13 weeks, or full year for monthly view
+  return rows.filter(r => {
+    const d = new Date(r['Date']);
+    const gap = (latest - d) / (1000 * 60 * 60 * 24);
+    return gap <= cutoffDays;
+  });
+}
+
+function setRange(range, btn) {
+  currentRange = range;
+  document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const filtered = filterRowsByRange(allRows, range);
+  buildCharts(filtered);
+}
+
 async function loadDashboard() {
   try {
     const res = await fetch(CSV_URL);
@@ -267,18 +312,29 @@ async function loadDashboard() {
     const text = await res.text();
     const rows = parseCSV(text);
     if (!rows.length) throw new Error('No data rows found in sheet');
+    allRows = rows;
 
     const latest = rows[rows.length - 1];
     const prev = rows.length > 1 ? rows[rows.length - 2] : null;
 
     document.getElementById('lastUpdated').textContent = 'Live · Week of ' + latest['Date'];
     document.getElementById('weekLabel').textContent = '📍 This week — ' + latest['Date'];
-    document.getElementById('badge-followers').textContent = prev ? ((num(latest['IG Followers']) - num(prev['IG Followers'])) >= 0 ? '+' : '') + (num(latest['IG Followers']) - num(prev['IG Followers'])) + ' vs last week' : 'First tracked week';
+
+    let badgeLabel = 'First tracked week';
+    if (prev) {
+      const d1 = new Date(prev['Date']);
+      const d2 = new Date(latest['Date']);
+      const dayGap = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+      const igDelta = num(latest['IG Followers']) - num(prev['IG Followers']);
+      const label = (dayGap >= 5 && dayGap <= 9) ? 'vs last week' : `vs ${prev['Date']}`;
+      badgeLabel = (igDelta >= 0 ? '+' : '') + igDelta + ' ' + label;
+    }
+    document.getElementById('badge-followers').textContent = badgeLabel;
     document.getElementById('badge-reviews').textContent = (latest['New Reviews This Week'] || '0') + ' this week';
 
     renderKPIs(latest, prev);
     renderYelpCards(latest);
-    buildCharts(rows);
+    buildCharts(filterRowsByRange(rows, currentRange));
 
     document.getElementById('dashContent').style.display = 'block';
   } catch (err) {

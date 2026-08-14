@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>Sushi Yorimichi — Martinez Consulting Co Dashboard</title>
+<style>
+:root{--bg:#f5f4f0;--surface:#fff;--s2:#f0ede8;--bd:rgba(0,0,0,0.08);--bd2:rgba(0,0,0,0.14);--tx:#111110;--tx2:#6b6960;--tx3:#9b9890;--ac:#c9a96e;--acl:#fdf8ee;--act:#7a5a18;--red:#c1392b;--rbg:#fdf0ee;--blu:#1a5fa8;--bbg:#edf4fd;--r:12px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);font-size:14px;line-height:1.5;min-height:100vh}
+.app{max-width:1100px;margin:0 auto;padding:24px 20px 48px}
+.dash-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.dash-brand{font-family:'DM Mono',monospace;font-size:10px;color:var(--tx3);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px}
+.dash-title{font-size:22px;font-weight:600;color:var(--tx)}
+.dash-sub{font-size:13px;color:var(--tx2);margin-top:2px}
+.dash-badge{background:var(--acl);border:0.5px solid var(--ac);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:500;color:var(--act);display:flex;align-items:center;gap:6px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--ac);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.load-banner{background:#111110;border-radius:var(--r);padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.load-text{font-size:12px;color:#d0cdc8;line-height:1.5;flex:1}
+.load-text strong{color:#fff}
+.error-banner{display:none;background:var(--rbg);border:0.5px solid var(--red);border-radius:var(--r);padding:12px 16px;margin-bottom:20px;font-size:12px;color:var(--red)}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:20px}
+.kpi-card{background:var(--surface);border:0.5px solid var(--bd);border-radius:var(--r);padding:16px}
+.kpi-label{font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px}
+.kpi-val{font-family:'DM Mono',monospace;font-size:26px;font-weight:500;color:var(--tx);line-height:1;margin-bottom:6px}
+.kpi-change{display:flex;align-items:center;gap:4px;font-size:12px}
+.kpi-change.up{color:#1D9E75}.kpi-change.down{color:var(--red)}.kpi-change.flat{color:var(--tx3)}
+.kpi-sub{font-size:11px;color:var(--tx3);margin-top:2px}
+.section-label{font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px}
+.chart-card{background:var(--surface);border:0.5px solid var(--bd);border-radius:var(--r);padding:18px;margin-bottom:12px}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:700px){.charts-grid{grid-template-columns:1fr}}
+.chart-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+.chart-title{font-size:13px;font-weight:600;color:var(--tx);display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+.chart-sub{font-size:11px;color:var(--tx3);margin-top:2px}
+.chart-badge{font-family:'DM Mono',monospace;font-size:11px;padding:3px 8px;border-radius:20px;background:var(--acl);color:var(--act)}
+.chart-badge.red{background:var(--rbg);color:var(--red)}
+.toggle-icon{width:18px;height:18px;border-radius:4px;background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.collapsible{overflow:hidden;transition:max-height 0.35s ease,opacity 0.3s ease;max-height:500px;opacity:1}
+.collapsible.collapsed{max-height:0;opacity:0}
+.reviews-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:700px){.reviews-grid{grid-template-columns:1fr}}
+.review-card{background:var(--surface);border:0.5px solid var(--bd);border-radius:var(--r);padding:16px}
+.review-platform{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.platform-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;background:#fdf0ee}
+.platform-name{font-size:13px;font-weight:600;color:var(--tx)}
+.platform-count{font-size:11px;color:var(--tx3);margin-top:1px}
+.stars{display:flex;gap:2px;align-items:center;margin-bottom:10px}
+.sf{color:#f5a623;font-size:14px}.se{color:#ddd;font-size:14px}
+.review-stat-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid var(--bd)}
+.review-stat-row:last-child{border-bottom:none;padding-bottom:0}
+.review-stat-label{font-size:12px;color:var(--tx2)}
+.rsv{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:var(--tx)}
+.rsv.green{color:#1D9E75}.rsv.red{color:var(--red)}
+.dash-footer{display:flex;justify-content:space-between;align-items:center;margin-top:20px;padding-top:16px;border-top:0.5px solid var(--bd);flex-wrap:wrap;gap:8px}
+.footer-brand{font-family:'DM Mono',monospace;font-size:10px;color:var(--tx3);letter-spacing:0.08em;text-transform:uppercase}
+.footer-note{font-size:11px;color:var(--tx3)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="dash-header">
+    <div>
+      <div class="dash-brand">Martinez Consulting Co — Client Dashboard</div>
+      <div class="dash-title">Sushi Yorimichi</div>
+      <div class="dash-sub">5299-B Linda Vista Rd + 2405 Ulric St · San Diego · Two Locations</div>
+    </div>
+    <div class="dash-badge"><div class="live-dot"></div><span id="lastUpdated">Loading…</span></div>
+  </div>
+
+  <div class="load-banner">
+    <div class="load-text"><strong>This dashboard updates automatically.</strong> Numbers below are pulled live from the weekly tracking sheet each time this page loads — no manual updates needed on this end.</div>
+  </div>
+
+  <div class="error-banner" id="errorBanner"></div>
+
+  <div id="dashContent" style="display:none">
+
+    <div style="margin-bottom:8px"><div class="section-label" id="weekLabel">This week</div></div>
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title" onclick="toggleSection('c-followers')">
+            <div class="toggle-icon" id="ti-c-followers">▾</div>
+            Instagram Follower Growth
+          </div>
+          <div class="chart-sub">Weekly totals, live from tracking sheet</div>
+        </div>
+        <div class="chart-badge" id="badge-followers"></div>
+      </div>
+      <div class="collapsible" id="c-followers"><canvas id="cFollowers" height="70"></canvas></div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card" style="margin-bottom:0">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title" onclick="toggleSection('c-fb')"><div class="toggle-icon" id="ti-c-fb">▾</div>Facebook Followers</div>
+            <div class="chart-sub">Weekly totals</div>
+          </div>
+          <div class="chart-badge red">Weakest channel</div>
+        </div>
+        <div class="collapsible" id="c-fb"><canvas id="cFb" height="100"></canvas></div>
+      </div>
+      <div class="chart-card" style="margin-bottom:0">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title" onclick="toggleSection('c-reviews')"><div class="toggle-icon" id="ti-c-reviews">▾</div>New Reviews per Week</div>
+            <div class="chart-sub">Yelp, both locations combined</div>
+          </div>
+          <div class="chart-badge" id="badge-reviews"></div>
+        </div>
+        <div class="collapsible" id="c-reviews"><canvas id="cReviews" height="100"></canvas></div>
+      </div>
+    </div>
+
+    <br>
+
+    <div class="reviews-grid" id="yelpCards"></div>
+
+    <div class="chart-card" id="respCard">
+      <div class="chart-title" style="margin-bottom:12px">
+        <div class="toggle-icon" style="background:var(--rbg);color:var(--red)">!</div>
+        Reviews Needing Response
+      </div>
+      <div id="respList" style="font-size:12px;color:var(--tx2)"></div>
+    </div>
+
+  </div>
+
+  <div class="dash-footer">
+    <div class="footer-brand">Martinez Consulting Co</div>
+    <div class="footer-note">Sushi Yorimichi · Live weekly dashboard · 619-962-4218</div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+/*
+  LIVE DATA SOURCE: this dashboard fetches directly from the published
+  CSV export of SushiYorimichi_MetricsTracking_v3. Updating that Sheet
+  updates what appears here automatically on next page load — no
+  re-hosting needed.
+
+  REQUIREMENT: the Sheet's sharing must be set to "Anyone with the
+  link can view" or this fetch will fail (this cannot be verified from
+  within Claude's sandbox — confirm in Google Sheets' Share settings).
+*/
+const SHEET_ID = '1gzo8_icKaoIBPylI0gvYhDdxRrsOFoEnMJmTI7AGNpE';
+const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim());
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    // Basic CSV split respecting quoted fields (commas inside quotes)
+    const vals = [];
+    let cur = '', inQuotes = false;
+    for (const ch of lines[i]) {
+      if (ch === '"') { inQuotes = !inQuotes; continue; }
+      if (ch === ',' && !inQuotes) { vals.push(cur); cur = ''; continue; }
+      cur += ch;
+    }
+    vals.push(cur);
+    const row = {};
+    headers.forEach((h, idx) => row[h] = (vals[idx] || '').trim());
+    rows.push(row);
+  }
+  return rows;
+}
+
+function num(v) {
+  if (v === undefined || v === null || v === 'N/A' || v === '') return null;
+  const n = parseFloat(v);
+  return isNaN(n) ? null : n;
+}
+
+let charts = {};
+const COPTS = {
+  responsive: true,
+  plugins: { legend: { display: false }, tooltip: { backgroundColor: '#111110', titleFont: { family: 'DM Mono', size: 11 }, bodyFont: { family: 'DM Sans', size: 12 }, padding: 10, cornerRadius: 8 } },
+  scales: { x: { grid: { display: false }, ticks: { font: { family: 'DM Sans', size: 11 }, color: '#9b9890' } }, y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { family: 'DM Mono', size: 11 }, color: '#9b9890' } } }
+};
+
+function buildCharts(rows) {
+  Object.values(charts).forEach(c => { try { c.destroy() } catch (e) {} });
+  charts = {};
+  const labels = rows.map(r => r['Date']);
+  const ig = rows.map(r => num(r['IG Followers']));
+  const fb = rows.map(r => num(r['FB Followers']));
+  const reviews = rows.map(r => num(r['New Reviews This Week']) || 0);
+
+  charts.f = new Chart(document.getElementById('cFollowers'), { type: 'line',
+    data: { labels, datasets: [{ data: ig, borderColor: '#c9a96e', backgroundColor: 'rgba(201,169,110,0.08)', borderWidth: 2.5, pointRadius: 5, tension: 0.3, fill: true }] },
+    options: { ...COPTS, plugins: { ...COPTS.plugins, tooltip: { ...COPTS.plugins.tooltip, callbacks: { label: ctx => ` ${ctx.parsed.y?.toLocaleString() ?? 'N/A'} followers` } } } } });
+
+  charts.fb = new Chart(document.getElementById('cFb'), { type: 'line',
+    data: { labels, datasets: [{ data: fb, borderColor: '#c1392b', backgroundColor: 'rgba(193,57,43,0.08)', borderWidth: 2.5, pointRadius: 5, tension: 0.3, fill: true }] },
+    options: { ...COPTS, plugins: { ...COPTS.plugins, tooltip: { ...COPTS.plugins.tooltip, callbacks: { label: ctx => ` ${ctx.parsed.y?.toLocaleString() ?? 'N/A'} followers` } } } } });
+
+  charts.r = new Chart(document.getElementById('cReviews'), { type: 'bar',
+    data: { labels, datasets: [{ data: reviews, backgroundColor: 'rgba(26,95,168,0.15)', borderColor: '#1a5fa8', borderWidth: 1.5, borderRadius: 6 }] },
+    options: { ...COPTS, plugins: { ...COPTS.plugins, tooltip: { ...COPTS.plugins.tooltip, callbacks: { label: ctx => ` ${ctx.parsed.y} new reviews` } } } } });
+}
+
+function renderKPIs(latest, prev) {
+  const igChg = prev && num(latest['IG Followers']) !== null && num(prev['IG Followers']) !== null
+    ? num(latest['IG Followers']) - num(prev['IG Followers']) : null;
+  const fbChg = prev && num(latest['FB Followers']) !== null && num(prev['FB Followers']) !== null
+    ? num(latest['FB Followers']) - num(prev['FB Followers']) : null;
+
+  const cards = [
+    { label: 'Instagram Followers', val: latest['IG Followers'], chg: igChg, sub: `${latest['IG Total Posts'] || '—'} total posts` },
+    { label: 'Facebook Followers', val: latest['FB Followers'], chg: fbChg, sub: `${latest['FB Reviews'] || '—'} reviews` },
+    { label: 'Yelp Y1 · Linda Vista', val: (latest['Y1 Rating'] && latest['Y1 Rating'] !== 'N/A') ? latest['Y1 Rating'] + '★' : 'N/A', chg: null, sub: `${latest['Y1 Review Count'] || '—'} total reviews` },
+    { label: 'Yelp Y2 · Ulric', val: (latest['Y2 Rating'] && latest['Y2 Rating'] !== 'N/A') ? latest['Y2 Rating'] + '★' : 'N/A', chg: null, sub: `${latest['Y2 Review Count'] || '—'} total reviews` },
+    { label: 'New Reviews This Week', val: latest['New Reviews This Week'] || '0', chg: null, sub: 'Yelp, both locations' },
+    { label: 'Reviews Needing Response', val: latest['Reviews Needing Response'] || '0', chg: null, sub: 'See list below', red: true },
+  ];
+
+  document.getElementById('kpiGrid').innerHTML = cards.map(c => `
+    <div class="kpi-card">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-val" style="${c.red ? 'color:var(--red)' : ''}">${c.val}</div>
+      ${c.chg !== null ? `<div class="kpi-change ${c.chg > 0 ? 'up' : c.chg < 0 ? 'down' : 'flat'}">${c.chg > 0 ? '↑' : c.chg < 0 ? '↓' : ''} ${c.chg > 0 ? '+' : ''}${c.chg} vs last week</div>` : ''}
+      <div class="kpi-sub">${c.sub}</div>
+    </div>`).join('');
+}
+
+function renderYelpCards(latest) {
+  document.getElementById('yelpCards').innerHTML = ['Y1', 'Y2'].map(loc => {
+    const name = loc === 'Y1' ? 'Yelp — Y1 Linda Vista' : 'Yelp — Y2 Ulric';
+    const addr = loc === 'Y1' ? '5299-B Linda Vista Rd' : '2405 Ulric St';
+    const rating = latest[`${loc} Rating`];
+    const count = latest[`${loc} Review Count`];
+    return `
+    <div class="review-card">
+      <div class="review-platform">
+        <div class="platform-icon">⭐</div>
+        <div><div class="platform-name">${name}</div><div class="platform-count">${addr}</div></div>
+      </div>
+      <div class="review-stat-row"><span class="review-stat-label">Rating</span><span class="rsv">${rating && rating !== 'N/A' ? rating + '★' : 'N/A'}</span></div>
+      <div class="review-stat-row"><span class="review-stat-label">Total reviews</span><span class="rsv">${count || 'N/A'}</span></div>
+    </div>`;
+  }).join('');
+}
+
+function toggleSection(id) {
+  const el = document.getElementById(id);
+  const icon = document.getElementById('ti-' + id);
+  const was = el.classList.contains('collapsed');
+  el.classList.toggle('collapsed', !was);
+  if (icon) icon.textContent = was ? '▾' : '▸';
+}
+
+async function loadDashboard() {
+  try {
+    const res = await fetch(CSV_URL);
+    if (!res.ok) throw new Error('Sheet fetch failed: ' + res.status);
+    const text = await res.text();
+    const rows = parseCSV(text);
+    if (!rows.length) throw new Error('No data rows found in sheet');
+
+    const latest = rows[rows.length - 1];
+    const prev = rows.length > 1 ? rows[rows.length - 2] : null;
+
+    document.getElementById('lastUpdated').textContent = 'Live · Week of ' + latest['Date'];
+    document.getElementById('weekLabel').textContent = '📍 This week — ' + latest['Date'];
+    document.getElementById('badge-followers').textContent = prev ? ((num(latest['IG Followers']) - num(prev['IG Followers'])) >= 0 ? '+' : '') + (num(latest['IG Followers']) - num(prev['IG Followers'])) + ' vs last week' : 'First tracked week';
+    document.getElementById('badge-reviews').textContent = (latest['New Reviews This Week'] || '0') + ' this week';
+
+    renderKPIs(latest, prev);
+    renderYelpCards(latest);
+    buildCharts(rows);
+
+    document.getElementById('dashContent').style.display = 'block';
+  } catch (err) {
+    const banner = document.getElementById('errorBanner');
+    banner.style.display = 'block';
+    banner.textContent = 'Could not load live data (' + err.message + '). This usually means the tracking sheet\'s sharing needs to be set to "Anyone with the link can view."';
+  }
+}
+
+window.addEventListener('load', loadDashboard);
+</script>
+</body>
+</html>

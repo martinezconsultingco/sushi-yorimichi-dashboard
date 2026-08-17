@@ -59,6 +59,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);font-
 .review-stat-label{font-size:12px;color:var(--tx2)}
 .rsv{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:var(--tx)}
 .rsv.green{color:#1D9E75}.rsv.red{color:var(--red)}
+.resp-item{padding:12px 0;border-bottom:0.5px solid var(--bd)}
+.resp-item:last-child{border-bottom:none;padding-bottom:0}
+.resp-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;gap:8px}
+.resp-name{font-size:13px;font-weight:600;color:var(--tx)}
+.resp-loc{font-size:10px;font-weight:600;color:var(--act);background:var(--acl);border-radius:10px;padding:2px 8px;white-space:nowrap}
+.resp-date{font-size:11px;color:var(--tx3);margin-top:1px}
+.resp-snippet{font-size:12px;color:var(--tx2);margin-top:6px;line-height:1.5}
+.resp-draft{background:var(--s2);border-radius:8px;padding:10px 12px;margin-top:8px;font-size:12px;color:var(--tx);line-height:1.5}
+.resp-draft-label{font-size:10px;font-weight:600;color:var(--act);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px}
+.resp-link{display:inline-block;margin-top:8px;font-size:12px;color:var(--blu);text-decoration:none;font-weight:500}
+.resp-link:hover{text-decoration:underline}
+.resp-empty{font-size:13px;color:var(--tx3);padding:8px 0}
 .dash-footer{display:flex;justify-content:space-between;align-items:center;margin-top:20px;padding-top:16px;border-top:0.5px solid var(--bd);flex-wrap:wrap;gap:8px}
 .footer-brand{font-family:'DM Mono',monospace;font-size:10px;color:var(--tx3);letter-spacing:0.08em;text-transform:uppercase}
 .footer-note{font-size:11px;color:var(--tx3)}
@@ -164,8 +176,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);font-
   link can view" or this fetch will fail (this cannot be verified from
   within Claude's sandbox — confirm in Google Sheets' Share settings).
 */
-const SHEET_ID = '1gzo8_icKaoIBPylI0gvYhDdxRrsOFoEnMJmTI7AGNpE';
+const SHEET_ID = '1dTVPx1f8KLW08rw5etj8Ef-HtgPCF4GgFTOQrrniJs0'; // v4 - corrected Y2 review counts 8/17
+const REVIEW_LOG_SHEET_ID = '1kWny8fVSoQamJlvnCqYAFKxbmufqR9Saex6B2ufrEdg'; // v2 - added Suggested Response Draft column 8/17
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+const REVIEW_LOG_CSV_URL = `https://docs.google.com/spreadsheets/d/${REVIEW_LOG_SHEET_ID}/export?format=csv`;
+
+const YELP_LOCATION_URLS = {
+  'Y1 Linda Vista': 'https://www.yelp.com/biz/sushi-yorimichi-2-san-diego-6?sort_by=date_desc',
+  'Y2 Ulric': 'https://www.yelp.com/biz/sushi-yorimichi-san-diego-9?sort_by=date_desc'
+};
 
 function parseCSV(text) {
   const lines = text.trim().split('\n');
@@ -275,6 +294,45 @@ function renderYelpCards(latest) {
   }).join('');
 }
 
+function escapeHtml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderNeedsResponse(reviewRows) {
+  // Show EVERY review across the full log where a response hasn't been
+  // given yet - not just ones from this week's pull. A review sitting
+  // unanswered for weeks shouldn't disappear from view just because a
+  // newer week's data came in.
+  const needsResponse = reviewRows.filter(r => (r['Owner Response Exists'] || '').trim().toLowerCase() === 'no');
+  const el = document.getElementById('respList');
+
+  if (needsResponse.length === 0) {
+    el.innerHTML = '<div class="resp-empty">Nothing outstanding — every logged review has a response. ✅</div>';
+    return;
+  }
+
+  // Oldest first, so the longest-outstanding ones surface at the top
+  needsResponse.sort((a, b) => new Date(a['Date']) - new Date(b['Date']));
+
+  el.innerHTML = needsResponse.map(r => {
+    const loc = r['Location'] || '';
+    const yelpUrl = YELP_LOCATION_URLS[loc] || 'https://www.yelp.com';
+    const snippet = (r['Review Text'] || '').slice(0, 220);
+    const draft = r['Suggested Response Draft'] || '';
+    return `
+    <div class="resp-item">
+      <div class="resp-top">
+        <span class="resp-name">${escapeHtml(r['Reviewer'])}</span>
+        <span class="resp-loc">${escapeHtml(loc)}</span>
+      </div>
+      <div class="resp-date">${escapeHtml(r['Star Rating'])}★ · ${escapeHtml(r['Date'])} · Needs response</div>
+      <div class="resp-snippet">"${escapeHtml(snippet)}${snippet.length >= 220 ? '...' : ''}"</div>
+      ${draft ? `<div class="resp-draft"><div class="resp-draft-label">Suggested reply (copy and paste into Yelp)</div>${escapeHtml(draft)}</div>` : ''}
+      <a class="resp-link" href="${yelpUrl}" target="_blank" rel="noopener">Reply on Yelp →</a>
+    </div>`;
+  }).join('');
+}
+
 function toggleSection(id) {
   const el = document.getElementById(id);
   const icon = document.getElementById('ti-' + id);
@@ -337,6 +395,20 @@ async function loadDashboard() {
     buildCharts(filterRowsByRange(rows, currentRange));
 
     document.getElementById('dashContent').style.display = 'block';
+
+    // Review Log fetch is separate and non-blocking - if it fails, the
+    // rest of the dashboard still works, it just shows a message in the
+    // needs-response section rather than breaking the whole page.
+    try {
+      const reviewRes = await fetch(REVIEW_LOG_CSV_URL);
+      if (!reviewRes.ok) throw new Error('Review log fetch failed: ' + reviewRes.status);
+      const reviewText = await reviewRes.text();
+      const reviewRows = parseCSV(reviewText);
+      renderNeedsResponse(reviewRows);
+    } catch (reviewErr) {
+      document.getElementById('respList').innerHTML =
+        '<div class="resp-empty">Could not load the review log (' + reviewErr.message + ').</div>';
+    }
   } catch (err) {
     const banner = document.getElementById('errorBanner');
     banner.style.display = 'block';

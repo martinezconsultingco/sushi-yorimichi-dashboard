@@ -241,7 +241,7 @@ function buildCharts(rows) {
     options: { ...COPTS, plugins: { ...COPTS.plugins, tooltip: { ...COPTS.plugins.tooltip, callbacks: { label: ctx => ` ${ctx.parsed.y} new reviews` } } } } });
 }
 
-function renderKPIs(latest, prev) {
+function renderKPIs(latest, prev, allRows) {
   const igChg = prev && num(latest['IG Followers']) !== null && num(prev['IG Followers']) !== null
     ? num(latest['IG Followers']) - num(prev['IG Followers']) : null;
   const fbChg = prev && num(latest['FB Followers']) !== null && num(prev['FB Followers']) !== null
@@ -258,8 +258,18 @@ function renderKPIs(latest, prev) {
     compareLabel = (dayGap >= 5 && dayGap <= 9) ? 'vs last week' : `vs ${prev['Date']}`;
   }
 
+  // "Since work began" - always compares against the July 8 official
+  // baseline row specifically, regardless of which row is "last week."
+  // This is the real before/after line (see Notes on that row), distinct
+  // from the pre-proposal June 11 snapshot.
+  const workStartRow = allRows.find(r => r['Date'] === '2026-07-08');
+  let sinceWorkStart = null;
+  if (workStartRow && num(latest['IG Followers']) !== null && num(workStartRow['IG Followers']) !== null) {
+    sinceWorkStart = num(latest['IG Followers']) - num(workStartRow['IG Followers']);
+  }
+
   const cards = [
-    { label: 'Instagram Followers', val: latest['IG Followers'], chg: igChg, sub: `${latest['IG Total Posts'] || '—'} total posts` },
+    { label: 'Instagram Followers', val: latest['IG Followers'], chg: igChg, sub: `${latest['IG Total Posts'] || '—'} total posts`, since: sinceWorkStart },
     { label: 'Facebook Followers', val: latest['FB Followers'], chg: fbChg, sub: `${latest['FB Reviews'] || '—'} reviews` },
     { label: 'Yelp Y1 · Linda Vista', val: (latest['Y1 Rating'] && latest['Y1 Rating'] !== 'N/A') ? latest['Y1 Rating'] + '★' : 'N/A', chg: null, sub: `${latest['Y1 Review Count'] || '—'} total reviews` },
     { label: 'Yelp Y2 · Ulric', val: (latest['Y2 Rating'] && latest['Y2 Rating'] !== 'N/A') ? latest['Y2 Rating'] + '★' : 'N/A', chg: null, sub: `${latest['Y2 Review Count'] || '—'} total reviews` },
@@ -272,6 +282,7 @@ function renderKPIs(latest, prev) {
       <div class="kpi-label">${c.label}</div>
       <div class="kpi-val" style="${c.red ? 'color:var(--red)' : ''}">${c.val}</div>
       ${c.chg !== null ? `<div class="kpi-change ${c.chg > 0 ? 'up' : c.chg < 0 ? 'down' : 'flat'}">${c.chg > 0 ? '↑' : c.chg < 0 ? '↓' : ''} ${c.chg > 0 ? '+' : ''}${c.chg} ${compareLabel}</div>` : ''}
+      ${c.since !== null && c.since !== undefined ? `<div class="kpi-change ${c.since > 0 ? 'up' : c.since < 0 ? 'down' : 'flat'}" style="margin-top:2px">${c.since > 0 ? '↑' : c.since < 0 ? '↓' : ''} ${c.since > 0 ? '+' : ''}${c.since} since 7/8 (work start)</div>` : ''}
       <div class="kpi-sub">${c.sub}</div>
     </div>`).join('');
 }
@@ -390,7 +401,7 @@ async function loadDashboard() {
     document.getElementById('badge-followers').textContent = badgeLabel;
     document.getElementById('badge-reviews').textContent = (latest['New Reviews This Week'] || '0') + ' this week';
 
-    renderKPIs(latest, prev);
+    renderKPIs(latest, prev, rows);
     renderYelpCards(latest);
     buildCharts(filterRowsByRange(rows, currentRange));
 

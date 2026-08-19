@@ -165,6 +165,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);font-
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
 <script>
 /*
   LIVE DATA SOURCE: this dashboard fetches directly from the published
@@ -228,9 +229,35 @@ function buildCharts(rows) {
   const fb = rows.map(r => num(r['FB Followers']));
   const reviews = rows.map(r => num(r['New Reviews This Week']) || 0);
 
+  // Find where the July 8 official work-start baseline sits in this
+  // filtered row set, so the reference line only appears when that row
+  // is actually visible in the current view (Weekly/Monthly/All Time).
+  const workStartIndex = rows.findIndex(r => r['Date'] === '2026-07-08');
+
+  const followerAnnotations = workStartIndex >= 0 ? {
+    workStartLine: {
+      type: 'line',
+      xMin: workStartIndex,
+      xMax: workStartIndex,
+      borderColor: '#787060',
+      borderWidth: 1.5,
+      borderDash: [4, 4],
+      label: {
+        display: true,
+        content: 'Work started',
+        position: 'start',
+        backgroundColor: '#787060',
+        color: '#fff',
+        font: { family: 'DM Sans', size: 10, weight: '500' },
+        padding: { top: 2, bottom: 2, left: 6, right: 6 },
+        yAdjust: -6
+      }
+    }
+  } : {};
+
   charts.f = new Chart(document.getElementById('cFollowers'), { type: 'line',
     data: { labels, datasets: [{ data: ig, borderColor: '#c9a96e', backgroundColor: 'rgba(201,169,110,0.08)', borderWidth: 2.5, pointRadius: 5, tension: 0.3, fill: true }] },
-    options: { ...COPTS, plugins: { ...COPTS.plugins, tooltip: { ...COPTS.plugins.tooltip, callbacks: { label: ctx => ` ${ctx.parsed.y?.toLocaleString() ?? 'N/A'} followers` } } } } });
+    options: { ...COPTS, plugins: { ...COPTS.plugins, tooltip: { ...COPTS.plugins.tooltip, callbacks: { label: ctx => ` ${ctx.parsed.y?.toLocaleString() ?? 'N/A'} followers` } }, annotation: { annotations: followerAnnotations } } } });
 
   charts.fb = new Chart(document.getElementById('cFb'), { type: 'line',
     data: { labels, datasets: [{ data: fb, borderColor: '#c1392b', backgroundColor: 'rgba(193,57,43,0.08)', borderWidth: 2.5, pointRadius: 5, tension: 0.3, fill: true }] },
